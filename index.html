@@ -57,7 +57,7 @@
             color: var(--navy-blue);
         }
 
-        select, input[type="number"], input[type="password"] {
+        select, input[type="number"], input[type="password"], input[type="text"] {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border);
@@ -109,12 +109,14 @@
 
         .btn-save { background-color: var(--navy-blue); }
         .btn-save:hover { background-color: #061a2e; }
+        .btn-save:disabled { background-color: #536b82; cursor: not-allowed; }
+        
         .btn-print { background-color: var(--green); }
         .btn-print:hover { background-color: #218838; }
+        
         .btn-reset { background-color: #dc3545; }
         .btn-reset:hover { background-color: #c82333; }
 
-        /* Admin Section */
         .admin-section {
             margin-top: 50px;
             border-top: 2px dashed var(--border);
@@ -122,7 +124,36 @@
         }
 
         .dashboard {
-            display: none; /* Hidden by default */
+            display: none; 
+        }
+
+        .admin-settings {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .column-manager {
+            background: #d1ecf1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #bee5eb;
+        }
+
+        .column-manager h4 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+
+        .col-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .summary-cards {
@@ -143,10 +174,9 @@
         .card-filled { background-color: var(--green); }
         .card-pending { background-color: #dc3545; }
 
-        .badge-green { background-color: var(--green); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
-        .badge-red { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
+        .badge-green { background-color: var(--green); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; display: inline-block;}
+        .badge-red { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; display: inline-block;}
 
-        /* Modals/Alerts */
         #confirmationBox {
             display: none;
             background-color: #d4edda;
@@ -159,7 +189,6 @@
             font-weight: bold;
         }
 
-        /* Print CSS */
         @media print {
             body { background: white; padding: 0; }
             .container { box-shadow: none; max-width: 100%; border: none; padding: 0; }
@@ -167,16 +196,16 @@
             .print-school-name { display: block !important; font-size: 20px; font-weight: bold; margin-bottom: 10px; color: black; text-align: center;}
             table { border: 1px solid black; }
             th, td { border: 1px solid black; color: black; }
-            th { background-color: #f2f2f2; color: black; -webkit-print-color-adjust: exact; }
+            th { background-color: #f2f2f2 !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             h1 { font-size: 24px; color: black; }
         }
 
         .print-school-name { display: none; }
         
-        /* Responsive Table */
         @media (max-width: 768px) {
             .summary-cards { flex-direction: column; }
             table { display: block; overflow-x: auto; white-space: nowrap; }
+            .col-controls { flex-direction: column; }
         }
     </style>
 </head>
@@ -185,7 +214,8 @@
 <div class="container" id="mainApp">
     
     <div class="header-section">
-        <h1>विद्यार्थी आधार नोंदणी व अपडेट माहिती</h1>
+        <!-- Added ID to Heading -->
+        <h1 id="mainAppHeading">विद्यार्थी आधार नोंदणी व अपडेट माहिती</h1>
         <h3 class="no-print">केंद्रप्रमुख व मुख्याध्यापक फॉर्म</h3>
     </div>
 
@@ -204,26 +234,26 @@
 
         <table id="dataTable">
             <thead>
-                <tr>
+                <tr id="tableHeaderRow">
                     <th>इयत्ता</th>
-                    <th>पटसंख्या (एकूण)</th>
-                    <th>आधार अपडेट / Valid</th>
-                    <th>MBU पेंडींग</th>
-                    <th>आधार नसणारे</th>
-                    <th>नवीन आधार (जन्मप्रमाणपत्र उपलब्ध)</th>
+                    <th>एकूण पटसंख्या</th>
+                    <th>आधार अपडेटेड (Valid)</th>
+                    <th>MBU पेंडिंग</th>
+                    <th>आधार नसलेले विद्यार्थी</th>
+                    <th>नवीन आधार नोंदणी (जन्मप्रमाणपत्र उपलब्ध)</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
                 <!-- Rows injected by JS -->
             </tbody>
             <tfoot>
-                <tr>
+                <tr id="tableFooterRow">
                     <td>एकूण बेरीज</td>
-                    <td id="tot-enroll">0</td>
-                    <td id="tot-valid">0</td>
-                    <td id="tot-mbu">0</td>
-                    <td id="tot-no-aadhar">0</td>
-                    <td id="tot-new">0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
                 </tr>
             </tfoot>
         </table>
@@ -242,10 +272,40 @@
             <label for="adminPin">सुरक्षा पिन टाका:</label>
             <input type="password" id="adminPin" placeholder="४ अंकी पिन">
             <button class="btn-save" style="margin-top: 10px; width: 100%;" onclick="checkPin()">लॉगिन करा</button>
-            <p id="pinError" style="color: red; display: none; text-align: center;">चुकीचा पिन!</p>
+            <p id="pinError" style="color: red; display: none; text-align: center; margin-top: 10px;">चुकीचा पिन!</p>
         </div>
 
         <div class="dashboard" id="adminDashboard">
+            
+            <div class="admin-settings">
+                <button class="btn-save" style="padding: 5px 15px;" onclick="openChangePinModal()">अॅडमिन पिन बदला (Change PIN)</button>
+            </div>
+
+            <!-- ADDED HEADING MANAGEMENT FACILITY -->
+            <div class="column-manager" style="background: #fff3cd; border-color: #ffeeba;">
+                <h4 style="color: #856404;">फॉर्मचे शीर्षक व्यवस्थापन (Edit Heading)</h4>
+                <div class="col-controls">
+                    <input type="text" id="newHeadingInput" placeholder="नवीन शीर्षक टाका" style="width: auto; flex:1;">
+                    <button class="btn-save" id="saveHeadingBtn" style="padding: 8px 15px;" onclick="updateHeading()">शीर्षक सेव्ह करा</button>
+                </div>
+            </div>
+
+            <!-- COLUMN MANAGEMENT FACILITY -->
+            <div class="column-manager">
+                <h4>तक्ता कॉलम व्यवस्थापन (Add/Remove Columns)</h4>
+                <div class="col-controls">
+                    <input type="text" id="newColName" placeholder="नवीन कॉलमचे नाव" style="width: auto; flex:1;">
+                    <button class="btn-save" style="padding: 8px 15px;" onclick="addCustomColumn()">कॉलम जोडा</button>
+                    
+                    <span style="font-weight: bold; margin: 0 10px;">|</span>
+
+                    <select id="removeColSelect" style="width: auto; flex:1; padding: 8px;">
+                        <!-- Options injected by JS -->
+                    </select>
+                    <button class="btn-reset" style="padding: 8px 15px;" onclick="removeCustomColumn()">कॉलम काढा</button>
+                </div>
+            </div>
+
             <div class="summary-cards">
                 <div class="card card-total">
                     <h3>एकूण शाळा</h3>
@@ -283,7 +343,10 @@
 
 <script>
     // --- Google Apps Script Configuration ---
-    const SCRIPT_URL = 'YOUR_SCRIPT_URL_HERE'; // येथे तुमची Web App URL टाका
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx-ZFlOW4gaF3lOoS8u3rnRzJf3CskCBLg0LkPa7F8ub-UoS02HYqufKfwwLpMBK-0/exec';
+    
+    // Manage PIN using Local Storage
+    let currentAdminPin = localStorage.getItem('schoolAdminPin') || '3506';
     
     // School List Data
     const schools = [
@@ -316,12 +379,21 @@
         "ओम प्रसाद ज्यु. कॉलेज, अंबाजोगाई", "सरस्वती पब्लिक स्कूल नागझरी", "जिजाऊ इंटरनॅशनल स्कूल गिरवली (ब)"
     ];
 
-    // Initialization
     window.onload = () => {
         populateSchools();
         generateRows();
+        updateRemoveSelect();
         
-        // Listen to changes in Dropdown for Print Header
+        // Fetch Live Heading From Google Sheet
+        fetch(SCRIPT_URL + "?action=getHeading")
+        .then(res => res.json())
+        .then(data => {
+            if(data.heading) {
+                document.getElementById('mainAppHeading').innerText = data.heading;
+                document.getElementById('newHeadingInput').value = data.heading;
+            }
+        }).catch(err => console.log("Heading Load Error: ", err));
+
         document.getElementById('schoolSelect').addEventListener('change', function() {
             document.querySelector('#printSchoolName span').innerText = this.value;
         });
@@ -339,80 +411,170 @@
 
     function generateRows() {
         const tbody = document.getElementById('tableBody');
+        const headerCount = document.querySelectorAll('#tableHeaderRow th').length;
         tbody.innerHTML = '';
+        
         for(let i=1; i<=8; i++) {
             let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>इयत्ता ${i} ली</td>
-                <td><input type="number" class="c-enroll" min="0" oninput="calculateTotals()" placeholder="0"></td>
-                <td><input type="number" class="c-valid" min="0" oninput="calculateTotals()" placeholder="0"></td>
-                <td><input type="number" class="c-mbu" min="0" oninput="calculateTotals()" placeholder="0"></td>
-                <td><input type="number" class="c-no-aadhar" min="0" oninput="calculateTotals()" placeholder="0"></td>
-                <td><input type="number" class="c-new" min="0" oninput="calculateTotals()" placeholder="0"></td>
-            `;
+            let tdFirst = document.createElement('td');
+            tdFirst.innerText = `इयत्ता ${i} ली`;
+            tr.appendChild(tdFirst);
+
+            for(let j=1; j < headerCount; j++) {
+                let td = document.createElement('td');
+                td.innerHTML = `<input type="number" min="0" oninput="calculateTotals()" placeholder="0">`;
+                tr.appendChild(td);
+            }
             tbody.appendChild(tr);
         }
     }
 
     function calculateTotals() {
-        const columns = [
-            { class: 'c-enroll', id: 'tot-enroll' },
-            { class: 'c-valid', id: 'tot-valid' },
-            { class: 'c-mbu', id: 'tot-mbu' },
-            { class: 'c-no-aadhar', id: 'tot-no-aadhar' },
-            { class: 'c-new', id: 'tot-new' }
-        ];
+        const rows = document.querySelectorAll('#tableBody tr');
+        const footCells = document.querySelectorAll('#tableFooterRow td');
+        const colCount = footCells.length;
 
-        columns.forEach(col => {
-            let inputs = document.querySelectorAll('.' + col.class);
+        for(let c = 1; c < colCount; c++) {
             let sum = 0;
-            inputs.forEach(input => {
-                sum += Number(input.value) || 0;
+            rows.forEach(row => {
+                const input = row.children[c].querySelector('input');
+                if(input) sum += Number(input.value) || 0;
             });
-            document.getElementById(col.id).innerText = sum;
-        });
+            footCells[c].innerText = sum;
+        }
     }
 
-    // Save Data Logic
-    function saveData() {
-        const schoolName = document.getElementById('schoolSelect').value;
-        if(!schoolName) {
-            alert("कृपया प्रथम शाळेचे नाव निवडा.");
+    // --- Heading Management Function ---
+    function updateHeading() {
+        const newHeading = document.getElementById('newHeadingInput').value.trim();
+        if(!newHeading) {
+            alert("कृपया नवीन शीर्षक टाका!");
             return;
         }
 
-        // Collecting Data
-        let schoolData = { total: 0, valid: 0, mbu: 0, noAadhar: 0, new: 0 };
-        schoolData.total = document.getElementById('tot-enroll').innerText;
-        schoolData.valid = document.getElementById('tot-valid').innerText;
-        schoolData.mbu = document.getElementById('tot-mbu').innerText;
-        schoolData.noAadhar = document.getElementById('tot-no-aadhar').innerText;
-        schoolData.new = document.getElementById('tot-new').innerText;
+        const btn = document.getElementById('saveHeadingBtn');
+        btn.innerText = "सेव्ह होत आहे...";
+        btn.disabled = true;
 
-        // Save to localStorage for Admin View Dashboard capability
-        let db = JSON.parse(localStorage.getItem('aadharData') || '{}');
-        db[schoolName] = schoolData;
-        localStorage.setItem('aadharData', JSON.stringify(db));
-
-        // Note: Replace fetch below with actual backend if needed
-        /*
         fetch(SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify({ school: schoolName, data: schoolData })
-        }).then(res => res.json()).then(data => console.log(data));
-        */
+            body: JSON.stringify({ action: 'saveHeading', heading: newHeading }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                document.getElementById('mainAppHeading').innerText = newHeading;
+                alert("शीर्षक यशस्वीरित्या बदलले आहे!");
+            }
+        })
+        .catch(err => alert("त्रुटी: " + err))
+        .finally(() => {
+            btn.innerText = "शीर्षक सेव्ह करा";
+            btn.disabled = false;
+        });
+    }
 
-        document.getElementById('confirmationBox').style.display = 'block';
-        setTimeout(() => { document.getElementById('confirmationBox').style.display = 'none'; }, 5000);
-        
-        // Refresh Dashboard if open
-        if(document.getElementById('adminDashboard').style.display === 'block') {
-            loadAdminData();
+    // --- Admin Column Management Functions ---
+    function updateRemoveSelect() {
+        const select = document.getElementById('removeColSelect');
+        select.innerHTML = '<option value="">-- काढण्यासाठी कॉलम निवडा --</option>';
+        const ths = document.querySelectorAll('#tableHeaderRow th');
+        for(let i = 1; i < ths.length; i++) {
+            let opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = ths[i].innerText;
+            select.appendChild(opt);
         }
     }
 
+    function addCustomColumn() {
+        const colNameInput = document.getElementById('newColName');
+        const colName = colNameInput.value.trim();
+        if(!colName) return alert("कृपया नवीन कॉलमचे नाव टाका.");
+
+        const theadTr = document.getElementById('tableHeaderRow');
+        const newTh = document.createElement('th');
+        newTh.innerText = colName;
+        theadTr.appendChild(newTh);
+
+        const tbodyTrs = document.querySelectorAll('#tableBody tr');
+        tbodyTrs.forEach(tr => {
+            const newTd = document.createElement('td');
+            newTd.innerHTML = `<input type="number" min="0" oninput="calculateTotals()" placeholder="0">`;
+            tr.appendChild(newTd);
+        });
+
+        const tfootTr = document.getElementById('tableFooterRow');
+        const newTdFoot = document.createElement('td');
+        newTdFoot.innerText = '0';
+        tfootTr.appendChild(newTdFoot);
+
+        colNameInput.value = '';
+        updateRemoveSelect();
+        calculateTotals();
+    }
+
+    function removeCustomColumn() {
+        const select = document.getElementById('removeColSelect');
+        const colIndex = select.value;
+        if(!colIndex) return alert("कृपया डिलीट करण्यासाठी कॉलम निवडा.");
+        if(!confirm("तुम्हाला नक्की हा कॉलम डिलीट करायचा आहे का?")) return;
+
+        const idx = parseInt(colIndex);
+        const theadTr = document.getElementById('tableHeaderRow');
+        theadTr.removeChild(theadTr.children[idx]);
+
+        const tbodyTrs = document.querySelectorAll('#tableBody tr');
+        tbodyTrs.forEach(tr => tr.removeChild(tr.children[idx]));
+
+        const tfootTr = document.getElementById('tableFooterRow');
+        tfootTr.removeChild(tfootTr.children[idx]);
+
+        updateRemoveSelect();
+        calculateTotals();
+    }
+
+    // --- Save Data ---
+    function saveData() {
+        const schoolName = document.getElementById('schoolSelect').value;
+        if(!schoolName) return alert("कृपया प्रथम शाळेचे नाव निवडा.");
+
+        const saveBtn = document.querySelector('.btn-save');
+        saveBtn.innerText = "सेव्ह होत आहे...";
+        saveBtn.disabled = true;
+
+        let schoolData = {};
+        const headers = document.querySelectorAll('#tableHeaderRow th');
+        const footCells = document.querySelectorAll('#tableFooterRow td');
+        
+        for(let c = 1; c < headers.length; c++) {
+            let colName = headers[c].innerText.trim();
+            schoolData[colName] = footCells[c].innerText;
+        }
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save', school: schoolName, data: schoolData }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === "success") {
+                document.getElementById('confirmationBox').style.display = 'block';
+                setTimeout(() => { document.getElementById('confirmationBox').style.display = 'none'; }, 5000);
+                if(document.getElementById('adminDashboard').style.display === 'block') loadAdminData(); 
+            }
+        })
+        .catch(error => alert("माहिती जतन करताना तांत्रिक अडचण आली: " + error))
+        .finally(() => {
+            saveBtn.innerText = "माहिती जतन करा (Save)";
+            saveBtn.disabled = false;
+        });
+    }
+
     function resetForm() {
-        if(confirm("तुम्हाला खात्री आहे का? भरलेली सर्व माहिती डिलीट होईल.")) {
+        if(confirm("तुम्हाला खात्री आहे का? भरलेली सर्व माहिती रिकामी होईल.")) {
             document.getElementById('schoolSelect').value = '';
             document.querySelector('#printSchoolName span').innerText = '';
             let inputs = document.querySelectorAll('input[type="number"]');
@@ -421,10 +583,10 @@
         }
     }
 
-    // --- Admin Functions ---
+    // --- Admin Dashboard & Functions ---
     function checkPin() {
         const pin = document.getElementById('adminPin').value;
-        if(pin === '3506') {
+        if(pin === currentAdminPin) {
             document.getElementById('loginDiv').style.display = 'none';
             document.getElementById('adminDashboard').style.display = 'block';
             loadAdminData();
@@ -433,45 +595,75 @@
         }
     }
 
+    function openChangePinModal() {
+        let oldPinCheck = prompt("सध्याचा जुना पिन टाका:");
+        if (oldPinCheck === currentAdminPin) {
+            let newPin = prompt("नवीन पिन टाका (किमान ४ अक्षरे/अंक):");
+            if (newPin && newPin.length >= 4) {
+                localStorage.setItem('schoolAdminPin', newPin);
+                currentAdminPin = newPin;
+                alert("तुमचा पिन यशस्वीरित्या बदलण्यात आला आहे!");
+            }
+        } else if (oldPinCheck !== null) alert("चुकीचा जुना पिन!");
+    }
+
+    function resetAdminSchoolData(schoolName) {
+        if(confirm(`तुम्हाला नक्की '${schoolName}' ची भरलेली माहिती डिलीट करायची आहे का?`)) {
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'delete', school: schoolName }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert("माहिती यशस्वीरित्या डिलीट करण्यात आली आहे.");
+                loadAdminData();
+            });
+        }
+    }
+
     function loadAdminData() {
-        let db = JSON.parse(localStorage.getItem('aadharData') || '{}');
-        let filledCount = 0;
         let tbody = document.getElementById('adminTableBody');
-        tbody.innerHTML = '';
+        tbody.innerHTML = '<tr><td colspan="4" style="font-weight:bold; color:#0A2540;">लाईव्ह डेटा गुगल शीटवरून लोड होत आहे... कृपया प्रतीक्षा करा...</td></tr>';
 
-        schools.forEach((school, index) => {
-            let isFilled = db.hasOwnProperty(school);
-            if(isFilled) filledCount++;
-            
-            let statusBadge = isFilled ? '<span class="badge-green">भरले ✓</span>' : '<span class="badge-red">प्रलंबित</span>';
-            let actionBtn = isFilled ? `<button class="btn-print" style="padding: 5px 10px; font-size: 12px;" onclick="viewSchoolData('${school}')">पहा / PDF</button>` : '-';
+        fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(fetchedData => {
+            let submittedSchools = {};
+            fetchedData.forEach(row => submittedSchools[row.schoolName] = row);
 
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td style="text-align: left;">${school}</td>
-                <td>${statusBadge}</td>
-                <td>${actionBtn}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+            let filledCount = 0;
+            tbody.innerHTML = '';
 
-        document.getElementById('dash-total').innerText = schools.length;
-        document.getElementById('dash-filled').innerText = filledCount;
-        document.getElementById('dash-pending').innerText = schools.length - filledCount;
+            schools.forEach((school, index) => {
+                let isFilled = submittedSchools.hasOwnProperty(school);
+                if(isFilled) filledCount++;
+                let statusBadge = isFilled ? '<span class="badge-green">भरले ✓</span>' : '<span class="badge-red">प्रलंबित</span>';
+                let actionBtn = isFilled 
+                    ? `<button class="btn-print" style="padding: 5px 10px; font-size: 12px; margin-bottom:5px;" onclick="viewSchoolData('${school}')">पहा / PDF</button> 
+                       <button class="btn-reset" style="padding: 5px 10px; font-size: 12px;" onclick="resetAdminSchoolData('${school}')">डेटा डिलीट करा</button>` 
+                    : '-';
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${index + 1}</td><td style="text-align: left; font-weight:600;">${school}</td><td>${statusBadge}</td><td>${actionBtn}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('dash-total').innerText = schools.length;
+            document.getElementById('dash-filled').innerText = filledCount;
+            document.getElementById('dash-pending').innerText = schools.length - filledCount;
+        })
+        .catch(err => tbody.innerHTML = '<tr><td colspan="4" style="color:red; font-weight:bold;">डेटा लोड करण्यात अडचण आली. इंटरनेट तपासा.</td></tr>');
     }
 
     function viewSchoolData(schoolName) {
-        // Load data into main form for viewing/printing
         document.getElementById('schoolSelect').value = schoolName;
         document.querySelector('#printSchoolName span').innerText = schoolName;
-        
-        // In a real app, you would fetch row-level data from DB. 
-        // Here we just scroll up to show the structure ready for print.
-        alert(schoolName + " ची माहिती फॉर्ममध्ये लोड केली आहे. तुम्ही आता PDF काढू शकता.");
+        alert(schoolName + " ची माहिती पाहण्यासाठी किंवा PDF काढण्यासाठी मुख्य फॉर्म वापरण्यासाठी स्क्रोल अप करा.");
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 </script>
 
 </body>
 </html>
+
