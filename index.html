@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>विद्यार्थी आधार नोंदणी व अपडेट माहिती</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-blue: #0A2540;
+            --green: #28a745;
+            --white: #ffffff;
+            --light-bg: #f4f7f6;
+            --border: #ccc;
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: 'Noto Sans Devanagari', sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--white);
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--navy-blue);
+            text-align: center;
+        }
+
+        .header-section {
+            border-bottom: 2px solid var(--green);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+            color: var(--navy-blue);
+        }
+
+        select, input[type="number"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--navy-blue);
+            color: var(--white);
+            font-size: 14px;
+        }
+
+        tfoot {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--white);
+            transition: 0.3s;
+        }
+
+        .btn-save { background-color: var(--navy-blue); }
+        .btn-save:hover { background-color: #061a2e; }
+        .btn-print { background-color: var(--green); }
+        .btn-print:hover { background-color: #218838; }
+        .btn-reset { background-color: #dc3545; }
+        .btn-reset:hover { background-color: #c82333; }
+
+        /* Admin Section */
+        .admin-section {
+            margin-top: 50px;
+            border-top: 2px dashed var(--border);
+            padding-top: 20px;
+        }
+
+        .dashboard {
+            display: none; /* Hidden by default */
+        }
+
+        .summary-cards {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            flex: 1;
+            padding: 20px;
+            border-radius: 8px;
+            color: var(--white);
+            text-align: center;
+        }
+
+        .card-total { background-color: var(--navy-blue); }
+        .card-filled { background-color: var(--green); }
+        .card-pending { background-color: #dc3545; }
+
+        .badge-green { background-color: var(--green); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
+        .badge-red { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
+
+        /* Modals/Alerts */
+        #confirmationBox {
+            display: none;
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid #c3e6cb;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Print CSS */
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; max-width: 100%; border: none; padding: 0; }
+            .no-print, .btn-group, .admin-section, select { display: none !important; }
+            .print-school-name { display: block !important; font-size: 20px; font-weight: bold; margin-bottom: 10px; color: black; text-align: center;}
+            table { border: 1px solid black; }
+            th, td { border: 1px solid black; color: black; }
+            th { background-color: #f2f2f2; color: black; -webkit-print-color-adjust: exact; }
+            h1 { font-size: 24px; color: black; }
+        }
+
+        .print-school-name { display: none; }
+        
+        /* Responsive Table */
+        @media (max-width: 768px) {
+            .summary-cards { flex-direction: column; }
+            table { display: block; overflow-x: auto; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainApp">
+    
+    <div class="header-section">
+        <h1>विद्यार्थी आधार नोंदणी व अपडेट माहिती</h1>
+        <h3 class="no-print">केंद्रप्रमुख व मुख्याध्यापक फॉर्म</h3>
+    </div>
+
+    <!-- Main Form -->
+    <div class="form-section">
+        <div class="form-group no-print">
+            <label for="schoolSelect">शाळेचे नाव निवडा:</label>
+            <select id="schoolSelect">
+                <option value="">-- शाळा निवडा --</option>
+            </select>
+        </div>
+        
+        <div class="print-school-name" id="printSchoolName">शाळेचे नाव: <span></span></div>
+
+        <div id="confirmationBox">माहिती यशस्वीरित्या जतन करण्यात आली आहे! खालील तक्त्यामध्ये खात्री करा.</div>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>इयत्ता</th>
+                    <th>पटसंख्या (एकूण)</th>
+                    <th>आधार अपडेट / Valid</th>
+                    <th>MBU पेंडींग</th>
+                    <th>आधार नसणारे</th>
+                    <th>नवीन आधार (जन्मप्रमाणपत्र उपलब्ध)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Rows injected by JS -->
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>एकूण बेरीज</td>
+                    <td id="tot-enroll">0</td>
+                    <td id="tot-valid">0</td>
+                    <td id="tot-mbu">0</td>
+                    <td id="tot-no-aadhar">0</td>
+                    <td id="tot-new">0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="btn-group no-print">
+            <button class="btn-save" onclick="saveData()">माहिती जतन करा (Save)</button>
+            <button class="btn-print" onclick="window.print()">पीडीएफ डाऊनलोड करा (Print)</button>
+            <button class="btn-reset" onclick="resetForm()">रिकामे करा (Reset)</button>
+        </div>
+    </div>
+
+    <!-- Admin Section -->
+    <div class="admin-section no-print">
+        <h2>केंद्रप्रमुख लॉगिन (Admin Dashboard)</h2>
+        <div class="form-group" id="loginDiv" style="max-width: 300px; margin: 0 auto;">
+            <label for="adminPin">सुरक्षा पिन टाका:</label>
+            <input type="password" id="adminPin" placeholder="४ अंकी पिन">
+            <button class="btn-save" style="margin-top: 10px; width: 100%;" onclick="checkPin()">लॉगिन करा</button>
+            <p id="pinError" style="color: red; display: none; text-align: center;">चुकीचा पिन!</p>
+        </div>
+
+        <div class="dashboard" id="adminDashboard">
+            <div class="summary-cards">
+                <div class="card card-total">
+                    <h3>एकूण शाळा</h3>
+                    <h2 id="dash-total">0</h2>
+                </div>
+                <div class="card card-filled">
+                    <h3>माहिती भरलेल्या</h3>
+                    <h2 id="dash-filled">0</h2>
+                </div>
+                <div class="card card-pending">
+                    <h3>प्रलंबित शाळा</h3>
+                    <h2 id="dash-pending">0</h2>
+                </div>
+            </div>
+
+            <button class="btn-print" style="margin-bottom: 15px; width: 100%;" onclick="window.print()">सर्व भरलेल्या शाळांची एकत्रित पीडीएफ (Print)</button>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>अ.क्र.</th>
+                        <th>शाळेचे नाव</th>
+                        <th>स्थिती</th>
+                        <th>कृती</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTableBody">
+                    <!-- Admin rows injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Google Apps Script Configuration ---
+    const SCRIPT_URL = 'YOUR_SCRIPT_URL_HERE'; // येथे तुमची Web App URL टाका
+    
+    // School List Data
+    const schools = [
+        "शासकीय बहुउद्देशीय संमिश्र अपंग केंद्र, अंबाजोगाई", "सी.पी.एस. रविवार पेठ", "जि.प.प्रा.शा. क्र. २, अंबाजोगाई", 
+        "जि.प.प्रा.शा. साकुड (मराठी)", "जि.प.प्रा.शा. साकुड (उर्दू)", "जि.प.प्रा.शा. काळवटी तांडा क्र. १", 
+        "जि.प.प्रा.शा. काळवटी तांडा क्र. ३", "जि.प.प्रा.शा. भीमाई वस्ती", "जि.प.प्रा.शा. काळवटी तांडा क्र. २", 
+        "जि.प.प्रा.शा. मांडवा पठाण", "जि.प.प्रा.शा. मांडवा तांडा", "जि.प.प्रा.शा. पोलेवाडी", "जि.प.प्रा.शा. नागझरी वसाहत", 
+        "जि.प.प्रा.शा. शेपवाडी", "जि.प.प्रा.शा. सह्याद्री नगर शेपवाडी", "जि.प.प्रा.शा. पिंपळा धायगुडा (मराठी)", 
+        "जि.प.प्रा.शा. पिंपळा धायगुडा (उर्दू)", "जि.प.प्रा.शा. वरवटी", "जि.प.प्रा.शा. उघडे वस्ती (वरवटी)", 
+        "जि.प.प्रा.शा. तलाव पाटी", "जि.प.प्रा.शा. अंबलवाडी", "जि. प. प्रा.शा. गोल्टावस्ती", "जि.प.प्रा.शा. गिरवली आपेट", 
+        "जि.प.हा.स्कू. गिरवली", "जोधाप्रसाद मोदी माध्यमिक व उच्च माध्यमिक शाळा, अंबाजोगाई", "डॉ. राम भालचंद्र हायस्कूल, अंबाजोगाई", 
+        "कै. देवराव बालाजी गणगे योगेश्वरी नूतन प्राथमिक विभाग, अंबाजोगाई", "नेताजी सुभाषचंद्र प्रा.शा. अंबाजोगाई", 
+        "मिल्लीया प्रा.शा. अंबाजोगाई", "नूरजहाँ उर्दू प्राथमिक शाळा, अंबाजोगाई", "खोलेश्वर प्रा.शा. अंबाजोगाई", 
+        "उर्दू प्रा.शा. रविवार पेठ, अंबाजोगाई", "घाट नागनाथ प्रा.शा. अंबाजोगाई", "वसंतराव नाईक प्रा.शा. अंबाजोगाई", 
+        "योगेश्वरी नूतन हा. स्कू. अंबाजोगाई", "श्रीमती गोदावरीबाई कुंकुलोळ योगेश्वरी कन्या हा. स्कू., अंबाजोगाई", 
+        "नेताजी सुभाष हा. स्कू. अंबाजोगाई", "मिल्लीया हा. स्कू. अंबाजोगाई", "खोलेश्वर हा. स्कू. अंबाजोगाई", 
+        "मन्सूर हायस्कूल रविवार पेठ, अंबाजोगाई", "सावरकर विद्यालय पिंपळा धायगुडा", "माध्यमिक आश्रम शाळा आनंद नगर", 
+        "श्री व्यंकटेश विद्या मंदिर प्रा. शा. अंबाजोगाई", "श्री व्यंकटेश विद्या मंदिर हा. स्कू. अंबाजोगाई", 
+        "योगेश्वरी ज्युनिअर कॉलेज, अंबाजोगाई", "खोलेश्वर ज्युनिअर कॉलेज, अंबाजोगाई", "स्वामी रामानंद तीर्थ ज्युनिअर कॉलेज, अंबाजोगाई", 
+        "कला व वाणिज्य महिला महाविद्यालय, अंबाजोगाई", "यशवंतराव चव्हाण कला, वाणिज्य व विज्ञान महाविद्यालय, अंबाजोगाई", 
+        "मानव विकास अपंग विद्यालय, अंबाजोगाई", "सरस्वती हायस्कूल साकुड", "संत भगवानबाबा प्रा. आश्रम शाळा साकुड", 
+        "वैनगंगा हा. स्कू. मांडवा पठाण", "अल्लाम सिद्दीकी अल. उर्दू हा. स्कू. पिंपळा धायगुडा", "वसंतराव नाईक विद्यालय वरवटी", 
+        "तुकाराम पाटील प्रा.शा. गिरवली", "सोमेश्वर उर्दू प्राथमिक शाळा पिंपळा धायगुडा, अंबाजोगाई", "कै. दादाराव कराड हा. स्कू. शेपवाडी", 
+        "कर्तव्य मतिमंद मुलींचे निवासी विद्यालय", "महात्मा फुले केंद्रीय निवासी आश्रम शाळा, अंबाजोगाई", "कै. दादाराव कराड प्रा. शा. नागझरी", 
+        "जिजाऊ स्कूल भगवानबाबा चौक, अंबाजोगाई", "मुक्तांगण विद्यालय गिरवली रोड, अंबाजोगाई", "खोलेश्वर जीनियस सीबीएससी स्कूल, अंबाजोगाई", 
+        "विझडम इंग्लिश स्कूल युआर कॉलेज, अंबाजोगाई", "स्कॉलर्स एज्युकेशन पॅलेस, अंबाजोगाई", "छत्रपती संभाजी राजे ग्लोबल स्कूल जोगईवाडी", 
+        "न्यू इंग्लिश प्रा.शा. अंबाजोगाई", "न्यू इंग्लिश हा. स्कू. गुरुवारपेठ, अंबाजोगाई", "न्यू व्हिजन इंग्लिश स्कूल, अंबाजोगाई", 
+        "प्रमोदजी महाजन न्यू इंग्लिश स्कूल", "सुलावंतीबाई बालासाहेब शिंदे प्रा. शा. इंग्लिश, अंबाजोगाई", 
+        "छत्रपती संभाजी राजे ग्लोबल स्कूल आणि ज्यु. कॉलेज जोगईवाडी", "एरा इंटरनॅशनल स्कूल, अंबाजोगाई", "नारायणा वर्ल्ड स्कूल, अंबाजोगाई", 
+        "ओम प्रसाद ज्यु. कॉलेज, अंबाजोगाई", "सरस्वती पब्लिक स्कूल नागझरी", "जिजाऊ इंटरनॅशनल स्कूल गिरवली (ब)"
+    ];
+
+    // Initialization
+    window.onload = () => {
+        populateSchools();
+        generateRows();
+        
+        // Listen to changes in Dropdown for Print Header
+        document.getElementById('schoolSelect').addEventListener('change', function() {
+            document.querySelector('#printSchoolName span').innerText = this.value;
+        });
+    };
+
+    function populateSchools() {
+        const select = document.getElementById('schoolSelect');
+        schools.forEach(school => {
+            let option = document.createElement('option');
+            option.value = school;
+            option.textContent = school;
+            select.appendChild(option);
+        });
+    }
+
+    function generateRows() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        for(let i=1; i<=8; i++) {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>इयत्ता ${i} ली</td>
+                <td><input type="number" class="c-enroll" min="0" oninput="calculateTotals()" placeholder="0"></td>
+                <td><input type="number" class="c-valid" min="0" oninput="calculateTotals()" placeholder="0"></td>
+                <td><input type="number" class="c-mbu" min="0" oninput="calculateTotals()" placeholder="0"></td>
+                <td><input type="number" class="c-no-aadhar" min="0" oninput="calculateTotals()" placeholder="0"></td>
+                <td><input type="number" class="c-new" min="0" oninput="calculateTotals()" placeholder="0"></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function calculateTotals() {
+        const columns = [
+            { class: 'c-enroll', id: 'tot-enroll' },
+            { class: 'c-valid', id: 'tot-valid' },
+            { class: 'c-mbu', id: 'tot-mbu' },
+            { class: 'c-no-aadhar', id: 'tot-no-aadhar' },
+            { class: 'c-new', id: 'tot-new' }
+        ];
+
+        columns.forEach(col => {
+            let inputs = document.querySelectorAll('.' + col.class);
+            let sum = 0;
+            inputs.forEach(input => {
+                sum += Number(input.value) || 0;
+            });
+            document.getElementById(col.id).innerText = sum;
+        });
+    }
+
+    // Save Data Logic
+    function saveData() {
+        const schoolName = document.getElementById('schoolSelect').value;
+        if(!schoolName) {
+            alert("कृपया प्रथम शाळेचे नाव निवडा.");
+            return;
+        }
+
+        // Collecting Data
+        let schoolData = { total: 0, valid: 0, mbu: 0, noAadhar: 0, new: 0 };
+        schoolData.total = document.getElementById('tot-enroll').innerText;
+        schoolData.valid = document.getElementById('tot-valid').innerText;
+        schoolData.mbu = document.getElementById('tot-mbu').innerText;
+        schoolData.noAadhar = document.getElementById('tot-no-aadhar').innerText;
+        schoolData.new = document.getElementById('tot-new').innerText;
+
+        // Save to localStorage for Admin View Dashboard capability
+        let db = JSON.parse(localStorage.getItem('aadharData') || '{}');
+        db[schoolName] = schoolData;
+        localStorage.setItem('aadharData', JSON.stringify(db));
+
+        // Note: Replace fetch below with actual backend if needed
+        /*
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ school: schoolName, data: schoolData })
+        }).then(res => res.json()).then(data => console.log(data));
+        */
+
+        document.getElementById('confirmationBox').style.display = 'block';
+        setTimeout(() => { document.getElementById('confirmationBox').style.display = 'none'; }, 5000);
+        
+        // Refresh Dashboard if open
+        if(document.getElementById('adminDashboard').style.display === 'block') {
+            loadAdminData();
+        }
+    }
+
+    function resetForm() {
+        if(confirm("तुम्हाला खात्री आहे का? भरलेली सर्व माहिती डिलीट होईल.")) {
+            document.getElementById('schoolSelect').value = '';
+            document.querySelector('#printSchoolName span').innerText = '';
+            let inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(inp => inp.value = '');
+            calculateTotals();
+        }
+    }
+
+    // --- Admin Functions ---
+    function checkPin() {
+        const pin = document.getElementById('adminPin').value;
+        if(pin === '3506') {
+            document.getElementById('loginDiv').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'block';
+            loadAdminData();
+        } else {
+            document.getElementById('pinError').style.display = 'block';
+        }
+    }
+
+    function loadAdminData() {
+        let db = JSON.parse(localStorage.getItem('aadharData') || '{}');
+        let filledCount = 0;
+        let tbody = document.getElementById('adminTableBody');
+        tbody.innerHTML = '';
+
+        schools.forEach((school, index) => {
+            let isFilled = db.hasOwnProperty(school);
+            if(isFilled) filledCount++;
+            
+            let statusBadge = isFilled ? '<span class="badge-green">भरले ✓</span>' : '<span class="badge-red">प्रलंबित</span>';
+            let actionBtn = isFilled ? `<button class="btn-print" style="padding: 5px 10px; font-size: 12px;" onclick="viewSchoolData('${school}')">पहा / PDF</button>` : '-';
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td style="text-align: left;">${school}</td>
+                <td>${statusBadge}</td>
+                <td>${actionBtn}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('dash-total').innerText = schools.length;
+        document.getElementById('dash-filled').innerText = filledCount;
+        document.getElementById('dash-pending').innerText = schools.length - filledCount;
+    }
+
+    function viewSchoolData(schoolName) {
+        // Load data into main form for viewing/printing
+        document.getElementById('schoolSelect').value = schoolName;
+        document.querySelector('#printSchoolName span').innerText = schoolName;
+        
+        // In a real app, you would fetch row-level data from DB. 
+        // Here we just scroll up to show the structure ready for print.
+        alert(schoolName + " ची माहिती फॉर्ममध्ये लोड केली आहे. तुम्ही आता PDF काढू शकता.");
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
