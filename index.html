@@ -135,27 +135,6 @@
             text-align: center;
         }
 
-        .column-manager {
-            background: #d1ecf1;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #bee5eb;
-        }
-
-        .column-manager h4 {
-            margin-top: 0;
-            color: #0c5460;
-        }
-
-        .col-controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
         .summary-cards {
             display: flex;
             gap: 15px;
@@ -170,13 +149,11 @@
             text-align: center;
         }
 
-        /* कार्डमधील मजकूर नेहमी पांढरा आणि स्पष्ट दिसण्यासाठी */
         .card h2, .card h3 {
             color: #ffffff; 
             margin: 10px 0;
         }
 
-        /* एकूण शाळा कार्डचा रंग बदलला आहे */
         .card-total { background-color: #17a2b8; } 
         .card-filled { background-color: var(--green); }
         .card-pending { background-color: #dc3545; }
@@ -212,7 +189,6 @@
         @media (max-width: 768px) {
             .summary-cards { flex-direction: column; }
             table { display: block; overflow-x: auto; white-space: nowrap; }
-            .col-controls { flex-direction: column; }
         }
     </style>
 </head>
@@ -287,31 +263,6 @@
                 <button class="btn-save" style="padding: 5px 15px;" onclick="openChangePinModal()">अॅडमिन पिन बदला (Change PIN)</button>
             </div>
 
-            <!-- HEADING MANAGEMENT FACILITY -->
-            <div class="column-manager" style="background: #fff3cd; border-color: #ffeeba;">
-                <h4 style="color: #856404;">फॉर्मचे शीर्षक व्यवस्थापन (Edit Heading)</h4>
-                <div class="col-controls">
-                    <input type="text" id="newHeadingInput" placeholder="नवीन शीर्षक टाका" style="width: auto; flex:1;">
-                    <button class="btn-save" id="saveHeadingBtn" style="padding: 8px 15px;" onclick="updateHeading()">शीर्षक सेव्ह करा</button>
-                </div>
-            </div>
-
-            <!-- COLUMN MANAGEMENT FACILITY -->
-            <div class="column-manager">
-                <h4>तक्ता कॉलम व्यवस्थापन (Add/Remove Columns)</h4>
-                <div class="col-controls">
-                    <input type="text" id="newColName" placeholder="नवीन कॉलमचे नाव" style="width: auto; flex:1;">
-                    <button class="btn-save" style="padding: 8px 15px;" onclick="addCustomColumn()">कॉलम जोडा</button>
-                    
-                    <span style="font-weight: bold; margin: 0 10px;">|</span>
-
-                    <select id="removeColSelect" style="width: auto; flex:1; padding: 8px;">
-                        <!-- Options injected by JS -->
-                    </select>
-                    <button class="btn-reset" style="padding: 8px 15px;" onclick="removeCustomColumn()">कॉलम काढा</button>
-                </div>
-            </div>
-
             <div class="summary-cards">
                 <div class="card card-total">
                     <h3>एकूण शाळा</h3>
@@ -353,7 +304,7 @@
     
     // Manage PIN using Local Storage
     let currentAdminPin = localStorage.getItem('schoolAdminPin') || '3506';
-    let loadedSchoolData = {}; // Global object to hold fetched data for viewing
+    let loadedSchoolData = {}; 
     
     // School List Data
     const schools = [
@@ -389,21 +340,9 @@
     window.onload = () => {
         populateSchools();
         generateRows();
-        updateRemoveSelect();
-        
-        // Fetch Live Heading From Google Sheet
-        fetch(SCRIPT_URL + "?action=getHeading")
-        .then(res => res.json())
-        .then(data => {
-            if(data.heading) {
-                document.getElementById('mainAppHeading').innerText = data.heading;
-                document.getElementById('newHeadingInput').value = data.heading;
-            }
-        }).catch(err => console.log("Heading Load Error: ", err));
 
         document.getElementById('schoolSelect').addEventListener('change', function() {
             document.querySelector('#printSchoolName span').innerText = this.value;
-            // Clear rows when switching school manually
             resetFormInputs();
         });
     };
@@ -453,97 +392,6 @@
         }
     }
 
-    // --- Heading Management Function ---
-    function updateHeading() {
-        const newHeading = document.getElementById('newHeadingInput').value.trim();
-        if(!newHeading) {
-            alert("कृपया नवीन शीर्षक टाका!");
-            return;
-        }
-
-        const btn = document.getElementById('saveHeadingBtn');
-        btn.innerText = "सेव्ह होत आहे...";
-        btn.disabled = true;
-
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'saveHeading', heading: newHeading }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                document.getElementById('mainAppHeading').innerText = newHeading;
-                alert("शीर्षक यशस्वीरित्या बदलले आहे!");
-            }
-        })
-        .catch(err => alert("त्रुटी: " + err))
-        .finally(() => {
-            btn.innerText = "शीर्षक सेव्ह करा";
-            btn.disabled = false;
-        });
-    }
-
-    // --- Admin Column Management Functions ---
-    function updateRemoveSelect() {
-        const select = document.getElementById('removeColSelect');
-        select.innerHTML = '<option value="">-- काढण्यासाठी कॉलम निवडा --</option>';
-        const ths = document.querySelectorAll('#tableHeaderRow th');
-        for(let i = 1; i < ths.length; i++) {
-            let opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = ths[i].innerText;
-            select.appendChild(opt);
-        }
-    }
-
-    function addCustomColumn() {
-        const colNameInput = document.getElementById('newColName');
-        const colName = colNameInput.value.trim();
-        if(!colName) return alert("कृपया नवीन कॉलमचे नाव टाका.");
-
-        const theadTr = document.getElementById('tableHeaderRow');
-        const newTh = document.createElement('th');
-        newTh.innerText = colName;
-        theadTr.appendChild(newTh);
-
-        const tbodyTrs = document.querySelectorAll('#tableBody tr');
-        tbodyTrs.forEach(tr => {
-            const newTd = document.createElement('td');
-            newTd.innerHTML = `<input type="number" min="0" oninput="calculateTotals()" placeholder="0">`;
-            tr.appendChild(newTd);
-        });
-
-        const tfootTr = document.getElementById('tableFooterRow');
-        const newTdFoot = document.createElement('td');
-        newTdFoot.innerText = '0';
-        tfootTr.appendChild(newTdFoot);
-
-        colNameInput.value = '';
-        updateRemoveSelect();
-        calculateTotals();
-    }
-
-    function removeCustomColumn() {
-        const select = document.getElementById('removeColSelect');
-        const colIndex = select.value;
-        if(!colIndex) return alert("कृपया डिलीट करण्यासाठी कॉलम निवडा.");
-        if(!confirm("तुम्हाला नक्की हा कॉलम डिलीट करायचा आहे का?")) return;
-
-        const idx = parseInt(colIndex);
-        const theadTr = document.getElementById('tableHeaderRow');
-        theadTr.removeChild(theadTr.children[idx]);
-
-        const tbodyTrs = document.querySelectorAll('#tableBody tr');
-        tbodyTrs.forEach(tr => tr.removeChild(tr.children[idx]));
-
-        const tfootTr = document.getElementById('tableFooterRow');
-        tfootTr.removeChild(tfootTr.children[idx]);
-
-        updateRemoveSelect();
-        calculateTotals();
-    }
-
     // --- Save Data ---
     function saveData() {
         const schoolName = document.getElementById('schoolSelect').value;
@@ -556,7 +404,6 @@
         let schoolData = { rows: [], totals: {} };
         const headers = document.querySelectorAll('#tableHeaderRow th');
         
-        // Capture Class-by-Class row data
         const rows = document.querySelectorAll('#tableBody tr');
         rows.forEach(row => {
             let rowData = {};
@@ -568,7 +415,6 @@
             schoolData.rows.push(rowData);
         });
 
-        // Capture Totals
         const footCells = document.querySelectorAll('#tableFooterRow td');
         for(let c = 1; c < headers.length; c++) {
             let colName = headers[c].innerText.trim();
@@ -633,6 +479,7 @@
         } else if (oldPinCheck !== null) alert("चुकीचा जुना पिन!");
     }
 
+    // Updated Delete Function - Correctly re-fetches to update display board
     function resetAdminSchoolData(schoolName) {
         if(confirm(`तुम्हाला नक्की '${schoolName}' ची भरलेली माहिती डिलीट करायची आहे का?`)) {
             fetch(SCRIPT_URL, {
@@ -643,7 +490,19 @@
             .then(res => res.json())
             .then(data => {
                 alert("माहिती यशस्वीरित्या डिलीट करण्यात आली आहे.");
+                
+                // जर फॉर्ममध्ये डिलीट केलेली शाळा निवडलेली असेल, तर फॉर्मसुद्धा रिकामा करा
+                if (document.getElementById('schoolSelect').value === schoolName) {
+                    document.getElementById('schoolSelect').value = '';
+                    document.querySelector('#printSchoolName span').innerText = '';
+                    resetFormInputs();
+                }
+                
+                // डॅशबोर्डवरील आकडेवारी (Display Board) अपडेट करण्यासाठी नवीन डेटा लोड करा
                 loadAdminData();
+            })
+            .catch(err => {
+                alert("डेटा डिलीट करताना त्रुटी आली: " + err);
             });
         }
     }
@@ -656,9 +515,8 @@
         .then(res => res.json())
         .then(fetchedData => {
             let submittedSchools = {};
-            loadedSchoolData = {}; // clear global
+            loadedSchoolData = {}; 
             
-            // Account for exact key backend might return
             fetchedData.forEach(row => {
                 let sName = row.school || row.schoolName;
                 if(sName) {
@@ -694,9 +552,8 @@
     function viewSchoolData(schoolName) {
         document.getElementById('schoolSelect').value = schoolName;
         document.querySelector('#printSchoolName span').innerText = schoolName;
-        resetFormInputs(); // clear previous
+        resetFormInputs(); 
 
-        // Attempt to inject the data back into the table for viewing
         let sData = loadedSchoolData[schoolName];
         if (sData && sData.data && sData.data.rows) {
             const rows = document.querySelectorAll('#tableBody tr');
