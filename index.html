@@ -64,6 +64,13 @@
             border-radius: 4px;
             font-size: 16px;
         }
+        
+        /* Disabled input styling */
+        input:disabled, select:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            color: #495057;
+        }
 
         table {
             width: 100%;
@@ -109,7 +116,7 @@
 
         .btn-save { background-color: var(--navy-blue); }
         .btn-save:hover { background-color: #061a2e; }
-        .btn-save:disabled { background-color: #536b82; cursor: not-allowed; }
+        .btn-save:disabled { background-color: #536b82; cursor: not-allowed; opacity: 0.7; }
         
         .btn-print { background-color: var(--green); }
         .btn-print:hover { background-color: #218838; }
@@ -149,11 +156,7 @@
             text-align: center;
         }
 
-        .card h2, .card h3 {
-            color: #ffffff; 
-            margin: 10px 0;
-        }
-
+        .card h2, .card h3 { color: #ffffff; margin: 10px 0; }
         .card-total { background-color: #17a2b8; } 
         .card-filled { background-color: var(--green); }
         .card-pending { background-color: #dc3545; }
@@ -173,15 +176,78 @@
             font-weight: bold;
         }
 
+        .alert-warning {
+            display: none;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        /* ----- PDF Portrait Print Settings ----- */
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+
         @media print {
             body { background: white; padding: 0; }
-            .container { box-shadow: none; max-width: 100%; border: none; padding: 0; }
-            .no-print, .btn-group, .admin-section, select { display: none !important; }
-            .print-school-name { display: block !important; font-size: 20px; font-weight: bold; margin-bottom: 10px; color: black; text-align: center;}
-            table { border: 1px solid black; }
-            th, td { border: 1px solid black; color: black; }
-            th { background-color: #f2f2f2 !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            h1 { font-size: 24px; color: black; }
+            .container { box-shadow: none; max-width: 100%; border: none; padding: 0; margin: 0; }
+            .no-print, .btn-group, .admin-section, select, .alert-warning { display: none !important; }
+            
+            .print-school-name { 
+                display: block !important; 
+                font-size: 18px; 
+                font-weight: bold; 
+                margin-bottom: 15px; 
+                color: black; 
+                text-align: center;
+            }
+            
+            h1 { font-size: 22px; color: black; margin-bottom: 5px; }
+            
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                table-layout: fixed; /* Forces headers to stay within width */
+            }
+            
+            th, td { 
+                border: 1px solid black; 
+                color: black; 
+                padding: 6px 4px; 
+                font-size: 12px; /* Smaller font to fit portrait mode */
+                word-wrap: break-word; 
+                white-space: normal;
+                vertical-align: middle;
+            }
+            
+            th { 
+                background-color: #f2f2f2 !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+                font-size: 11px;
+            }
+
+            /* Make first column (इयत्ता) smaller to give room to long headers */
+            th:nth-child(1), td:nth-child(1) { width: 12%; }
+
+            /* Fix disabled inputs in print */
+            input[type="number"] {
+                border: none !important;
+                background: transparent !important;
+                color: black !important;
+                -webkit-text-fill-color: black !important;
+                opacity: 1 !important;
+                font-size: 12px;
+                text-align: center;
+                width: 100%;
+                padding: 0;
+            }
         }
 
         .print-school-name { display: none; }
@@ -210,8 +276,9 @@
             </select>
         </div>
         
-        <div class="print-school-name" id="printSchoolName">शाळेचे नाव: <span></span></div>
+        <div id="statusMessage" class="alert-warning"></div>
 
+        <div class="print-school-name" id="printSchoolName">शाळेचे नाव: <span></span></div>
         <div id="confirmationBox">माहिती यशस्वीरित्या जतन करण्यात आली आहे! खालील तक्त्यामध्ये खात्री करा.</div>
 
         <table id="dataTable">
@@ -241,9 +308,9 @@
         </table>
 
         <div class="btn-group no-print">
-            <button class="btn-save" onclick="saveData()">माहिती जतन करा (Save)</button>
+            <button class="btn-save" id="saveBtn" onclick="saveData()">माहिती जतन करा (Save)</button>
             <button class="btn-print" onclick="window.print()">पीडीएफ डाऊनलोड करा (Print)</button>
-            <button class="btn-reset" onclick="resetForm()">रिकामे करा (Reset)</button>
+            <button class="btn-reset" id="resetBtn" onclick="resetForm()">रिकामे करा (Clear Form)</button>
         </div>
     </div>
 
@@ -304,7 +371,7 @@
     
     // Manage PIN using Local Storage
     let currentAdminPin = localStorage.getItem('schoolAdminPin') || '3506';
-    let loadedSchoolData = {}; 
+    let globalSubmittedData = {}; // Global Data Tracker
     
     // School List Data
     const schools = [
@@ -340,10 +407,11 @@
     window.onload = () => {
         populateSchools();
         generateRows();
+        fetchGlobalData(); // Load submitted status on startup
 
         document.getElementById('schoolSelect').addEventListener('change', function() {
             document.querySelector('#printSchoolName span').innerText = this.value;
-            resetFormInputs();
+            checkSchoolStatus();
         });
     };
 
@@ -377,6 +445,96 @@
         }
     }
 
+    // --- FETCH DATA TO CHECK LOCK STATUS ---
+    function fetchGlobalData(showLoadingOnAdmin = false) {
+        let tbody = document.getElementById('adminTableBody');
+        if (showLoadingOnAdmin && tbody) {
+            tbody.innerHTML = '<tr><td colspan="4" style="font-weight:bold; color:#0A2540;">लाईव्ह डेटा गुगल शीटवरून लोड होत आहे... कृपया प्रतीक्षा करा...</td></tr>';
+        }
+
+        fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+            globalSubmittedData = {};
+            data.forEach(row => {
+                let sName = row.school || row.schoolName;
+                if(sName) globalSubmittedData[sName] = row;
+            });
+            
+            checkSchoolStatus(); // Apply lock/unlock based on fetched data
+            
+            if(document.getElementById('adminDashboard').style.display === 'block') {
+                renderAdminDashboard();
+            }
+        })
+        .catch(e => {
+            console.log("Error loading data:", e);
+            if(showLoadingOnAdmin && tbody) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:red; font-weight:bold;">डेटा लोड करण्यात अडचण आली. इंटरनेट तपासा.</td></tr>';
+            }
+        });
+    }
+
+    // --- FORM LOCKING & ENABLING LOGIC ---
+    function checkSchoolStatus() {
+        let schoolName = document.getElementById('schoolSelect').value;
+        let msgBox = document.getElementById('statusMessage');
+        
+        resetFormInputs(); // Clear current visual data
+
+        if(!schoolName) {
+            msgBox.style.display = 'none';
+            enableForm();
+            return;
+        }
+
+        if(globalSubmittedData[schoolName]) {
+            // Already submitted -> Populate and lock
+            populateTable(globalSubmittedData[schoolName]);
+            disableForm();
+            msgBox.innerHTML = "⚠️ या शाळेची माहिती आधीच भरलेली आहे. (बदल करण्यासाठी Admin पॅनेलमधून जुना डेटा डिलीट करा)";
+            msgBox.style.display = 'block';
+        } else {
+            // Not submitted -> Open for input
+            enableForm();
+            msgBox.style.display = 'none';
+        }
+    }
+
+    function populateTable(sData) {
+        if (sData && sData.data && sData.data.rows) {
+            const rows = document.querySelectorAll('#tableBody tr');
+            const headers = document.querySelectorAll('#tableHeaderRow th');
+            
+            sData.data.rows.forEach((rowData, index) => {
+                if(rows[index]) {
+                    for(let c = 1; c < headers.length; c++) {
+                        let colName = headers[c].innerText.trim();
+                        let input = rows[index].children[c].querySelector('input');
+                        if(input && rowData[colName]) {
+                            input.value = rowData[colName];
+                        }
+                    }
+                }
+            });
+            calculateTotals();
+        }
+    }
+
+    function disableForm() {
+        let inputs = document.querySelectorAll('#tableBody input');
+        inputs.forEach(inp => inp.disabled = true);
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('resetBtn').disabled = true;
+    }
+
+    function enableForm() {
+        let inputs = document.querySelectorAll('#tableBody input');
+        inputs.forEach(inp => inp.disabled = false);
+        document.getElementById('saveBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+    }
+
     function calculateTotals() {
         const rows = document.querySelectorAll('#tableBody tr');
         const footCells = document.querySelectorAll('#tableFooterRow td');
@@ -397,7 +555,7 @@
         const schoolName = document.getElementById('schoolSelect').value;
         if(!schoolName) return alert("कृपया प्रथम शाळेचे नाव निवडा.");
 
-        const saveBtn = document.querySelector('.btn-save');
+        const saveBtn = document.getElementById('saveBtn');
         saveBtn.innerText = "सेव्ह होत आहे...";
         saveBtn.disabled = true;
 
@@ -431,19 +589,28 @@
             if(data.status === "success") {
                 document.getElementById('confirmationBox').style.display = 'block';
                 setTimeout(() => { document.getElementById('confirmationBox').style.display = 'none'; }, 5000);
-                if(document.getElementById('adminDashboard').style.display === 'block') loadAdminData(); 
+                
+                // Add to global data locally to immediately lock form
+                globalSubmittedData[schoolName] = { data: schoolData, school: schoolName };
+                checkSchoolStatus(); 
+
+                if(document.getElementById('adminDashboard').style.display === 'block') {
+                    renderAdminDashboard(); 
+                }
             }
         })
         .catch(error => alert("माहिती जतन करताना तांत्रिक अडचण आली: " + error))
         .finally(() => {
             saveBtn.innerText = "माहिती जतन करा (Save)";
-            saveBtn.disabled = false;
+            // Button stays disabled if data was saved via checkSchoolStatus() logic
         });
     }
 
     function resetFormInputs() {
         let inputs = document.querySelectorAll('input[type="number"]');
-        inputs.forEach(inp => inp.value = '');
+        inputs.forEach(inp => {
+            inp.value = '';
+        });
         calculateTotals();
     }
 
@@ -452,6 +619,7 @@
             document.getElementById('schoolSelect').value = '';
             document.querySelector('#printSchoolName span').innerText = '';
             resetFormInputs();
+            document.getElementById('statusMessage').style.display = 'none';
         }
     }
 
@@ -461,7 +629,7 @@
         if(pin === currentAdminPin) {
             document.getElementById('loginDiv').style.display = 'none';
             document.getElementById('adminDashboard').style.display = 'block';
-            loadAdminData();
+            fetchGlobalData(true); // Fetch fresh data specifically for Admin
         } else {
             document.getElementById('pinError').style.display = 'block';
         }
@@ -479,7 +647,6 @@
         } else if (oldPinCheck !== null) alert("चुकीचा जुना पिन!");
     }
 
-    // Updated Delete Function - Correctly re-fetches to update display board
     function resetAdminSchoolData(schoolName) {
         if(confirm(`तुम्हाला नक्की '${schoolName}' ची भरलेली माहिती डिलीट करायची आहे का?`)) {
             fetch(SCRIPT_URL, {
@@ -491,88 +658,48 @@
             .then(data => {
                 alert("माहिती यशस्वीरित्या डिलीट करण्यात आली आहे.");
                 
-                // जर फॉर्ममध्ये डिलीट केलेली शाळा निवडलेली असेल, तर फॉर्मसुद्धा रिकामा करा
-                if (document.getElementById('schoolSelect').value === schoolName) {
-                    document.getElementById('schoolSelect').value = '';
-                    document.querySelector('#printSchoolName span').innerText = '';
-                    resetFormInputs();
-                }
+                // Remove from local tracker
+                delete globalSubmittedData[schoolName];
                 
-                // डॅशबोर्डवरील आकडेवारी (Display Board) अपडेट करण्यासाठी नवीन डेटा लोड करा
-                loadAdminData();
+                // Check if currently selected and unlock it
+                checkSchoolStatus();
+                
+                // Re-render admin board
+                renderAdminDashboard();
             })
-            .catch(err => {
-                alert("डेटा डिलीट करताना त्रुटी आली: " + err);
-            });
+            .catch(err => alert("डेटा डिलीट करताना त्रुटी आली: " + err));
         }
     }
 
-    function loadAdminData() {
+    function renderAdminDashboard() {
         let tbody = document.getElementById('adminTableBody');
-        tbody.innerHTML = '<tr><td colspan="4" style="font-weight:bold; color:#0A2540;">लाईव्ह डेटा गुगल शीटवरून लोड होत आहे... कृपया प्रतीक्षा करा...</td></tr>';
+        let filledCount = 0;
+        tbody.innerHTML = '';
 
-        fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(fetchedData => {
-            let submittedSchools = {};
-            loadedSchoolData = {}; 
-            
-            fetchedData.forEach(row => {
-                let sName = row.school || row.schoolName;
-                if(sName) {
-                    submittedSchools[sName] = row;
-                    loadedSchoolData[sName] = row;
-                }
-            });
+        schools.forEach((school, index) => {
+            let isFilled = globalSubmittedData.hasOwnProperty(school);
+            if(isFilled) filledCount++;
+            let statusBadge = isFilled ? '<span class="badge-green">भरले ✓</span>' : '<span class="badge-red">प्रलंबित</span>';
+            let actionBtn = isFilled 
+                ? `<button class="btn-print" style="padding: 5px 10px; font-size: 12px; margin-bottom:5px;" onclick="viewSchoolData('${school}')">पहा / PDF</button> 
+                   <button class="btn-reset" style="padding: 5px 10px; font-size: 12px;" onclick="resetAdminSchoolData('${school}')">डेटा डिलीट करा</button>` 
+                : '-';
 
-            let filledCount = 0;
-            tbody.innerHTML = '';
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td>${index + 1}</td><td style="text-align: left; font-weight:600;">${school}</td><td>${statusBadge}</td><td>${actionBtn}</td>`;
+            tbody.appendChild(tr);
+        });
 
-            schools.forEach((school, index) => {
-                let isFilled = submittedSchools.hasOwnProperty(school);
-                if(isFilled) filledCount++;
-                let statusBadge = isFilled ? '<span class="badge-green">भरले ✓</span>' : '<span class="badge-red">प्रलंबित</span>';
-                let actionBtn = isFilled 
-                    ? `<button class="btn-print" style="padding: 5px 10px; font-size: 12px; margin-bottom:5px;" onclick="viewSchoolData('${school}')">पहा / PDF</button> 
-                       <button class="btn-reset" style="padding: 5px 10px; font-size: 12px;" onclick="resetAdminSchoolData('${school}')">डेटा डिलीट करा</button>` 
-                    : '-';
-
-                let tr = document.createElement('tr');
-                tr.innerHTML = `<td>${index + 1}</td><td style="text-align: left; font-weight:600;">${school}</td><td>${statusBadge}</td><td>${actionBtn}</td>`;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('dash-total').innerText = schools.length;
-            document.getElementById('dash-filled').innerText = filledCount;
-            document.getElementById('dash-pending').innerText = schools.length - filledCount;
-        })
-        .catch(err => tbody.innerHTML = '<tr><td colspan="4" style="color:red; font-weight:bold;">डेटा लोड करण्यात अडचण आली. इंटरनेट तपासा.</td></tr>');
+        document.getElementById('dash-total').innerText = schools.length;
+        document.getElementById('dash-filled').innerText = filledCount;
+        document.getElementById('dash-pending').innerText = schools.length - filledCount;
     }
 
     function viewSchoolData(schoolName) {
         document.getElementById('schoolSelect').value = schoolName;
         document.querySelector('#printSchoolName span').innerText = schoolName;
-        resetFormInputs(); 
-
-        let sData = loadedSchoolData[schoolName];
-        if (sData && sData.data && sData.data.rows) {
-            const rows = document.querySelectorAll('#tableBody tr');
-            const headers = document.querySelectorAll('#tableHeaderRow th');
-            
-            sData.data.rows.forEach((rowData, index) => {
-                if(rows[index]) {
-                    for(let c = 1; c < headers.length; c++) {
-                        let colName = headers[c].innerText.trim();
-                        let input = rows[index].children[c].querySelector('input');
-                        if(input && rowData[colName]) {
-                            input.value = rowData[colName];
-                        }
-                    }
-                }
-            });
-            calculateTotals();
-        }
-
+        checkSchoolStatus(); // This will auto-populate and lock the form
+        
         alert(schoolName + " ची माहिती लोड झाली आहे. पाहण्यासाठी किंवा PDF काढण्यासाठी वर स्क्रोल करा.");
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
