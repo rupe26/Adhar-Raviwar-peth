@@ -170,7 +170,14 @@
             text-align: center;
         }
 
-        .card-total { background-color: var(--navy-blue); }
+        /* कार्डमधील मजकूर नेहमी पांढरा आणि स्पष्ट दिसण्यासाठी */
+        .card h2, .card h3 {
+            color: #ffffff; 
+            margin: 10px 0;
+        }
+
+        /* एकूण शाळा कार्डचा रंग बदलला आहे */
+        .card-total { background-color: #17a2b8; } 
         .card-filled { background-color: var(--green); }
         .card-pending { background-color: #dc3545; }
 
@@ -371,7 +378,7 @@
         "वैनगंगा हा. स्कू. मांडवा पठाण", "अल्लाम सिद्दीकी अल. उर्दू हा. स्कू. पिंपळा धायगुडा", "वसंतराव नाईक विद्यालय वरवटी", 
         "तुकाराम पाटील प्रा.शा. गिरवली", "सोमेश्वर उर्दू प्राथमिक शाळा पिंपळा धायगुडा, अंबाजोगाई", "कै. दादाराव कराड हा. स्कू. शेपवाडी", 
         "कर्तव्य मतिमंद मुलींचे निवासी विद्यालय", "महात्मा फुले केंद्रीय निवासी आश्रम शाळा, अंबाजोगाई", "कै. दादाराव कराड प्रा. शा. नागझरी", 
-        "जिजाऊ स्कूल भगवानबाबा चौक, अंबाजोगाई", "मुक्तांगण विद्यालय गिरवली रोड, अंबाजोगाई", "खोलेश्वर जीनियस सीबीएससी स्कूल, अंबाजोगाई", 
+        "जिजाऊ স্কুল भगवानबाबा चौक, अंबाजोगाई", "मुक्तांगण विद्यालय गिरवली रोड, अंबाजोगाई", "खोलेश्वर जीनियस सीबीएससी स्कूल, अंबाजोगाई", 
         "विझडम इंग्लिश स्कूल युआर कॉलेज, अंबाजोगाई", "स्कॉलर्स एज्युकेशन पॅलेस, अंबाजोगाई", "छत्रपती संभाजी राजे ग्लोबल स्कूल जोगईवाडी", 
         "न्यू इंग्लिश प्रा.शा. अंबाजोगाई", "न्यू इंग्लिश हा. स्कू. गुरुवारपेठ, अंबाजोगाई", "न्यू व्हिजन इंग्लिश स्कूल, अंबाजोगाई", 
         "प्रमोदजी महाजन न्यू इंग्लिश स्कूल", "सुलावंतीबाई बालासाहेब शिंदे प्रा. शा. इंग्लिश, अंबाजोगाई", 
@@ -549,7 +556,7 @@
         let schoolData = { rows: [], totals: {} };
         const headers = document.querySelectorAll('#tableHeaderRow th');
         
-        // BUG FIX 1: Capture Class-by-Class row data
+        // Capture Class-by-Class row data
         const rows = document.querySelectorAll('#tableBody tr');
         rows.forEach(row => {
             let rowData = {};
@@ -651,7 +658,7 @@
             let submittedSchools = {};
             loadedSchoolData = {}; // clear global
             
-            // BUG FIX 2: Account for exact key backend might return (school vs schoolName)
+            // Account for exact key backend might return
             fetchedData.forEach(row => {
                 let sName = row.school || row.schoolName;
                 if(sName) {
@@ -689,7 +696,7 @@
         document.querySelector('#printSchoolName span').innerText = schoolName;
         resetFormInputs(); // clear previous
 
-        // BUG FIX 3: Attempt to inject the data back into the table for viewing
+        // Attempt to inject the data back into the table for viewing
         let sData = loadedSchoolData[schoolName];
         if (sData && sData.data && sData.data.rows) {
             const rows = document.querySelectorAll('#tableBody tr');
